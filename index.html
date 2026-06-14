@@ -45,7 +45,7 @@
     display: flex; align-items: center; gap: 10px;
     background: rgba(2, 6, 15, 0.55);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    padding: 8px 14px; border-radius: 14px; z-index: 4;
+    padding: 16px 14px 8px; border-radius: 14px; z-index: 4;
   }
   .slider-bar .season-label {
     flex: 0 0 auto; font-size: 16px; font-weight: 700; min-width: 2.4em; text-align: center;
@@ -55,13 +55,20 @@
     -webkit-appearance: none; appearance: none; background: transparent;
   }
   #orbitSlider:focus { outline: none; }
+  .slider-wrap { position: relative; flex: 1 1 auto; }
+  .slider-ticks {
+    position: absolute; left: 0; right: 0; top: -14px; height: 14px;
+    pointer-events: none;
+  }
+  .slider-ticks span {
+    position: absolute; transform: translateX(-50%);
+    font-size: 13px; font-weight: 700; opacity: 0.85;
+  }
   #orbitSlider::-webkit-slider-runnable-track {
-    height: 6px; border-radius: 3px;
-    background: linear-gradient(90deg, #4ea8ff, #ffd24e, #ff7a4e, #4eff9a, #4ea8ff);
+    height: 6px; border-radius: 3px; background: #4ea8ff;
   }
   #orbitSlider::-moz-range-track {
-    height: 6px; border-radius: 3px;
-    background: linear-gradient(90deg, #4ea8ff, #ffd24e, #ff7a4e, #4eff9a, #4ea8ff);
+    height: 6px; border-radius: 3px; background: #4ea8ff;
   }
   #orbitSlider::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
@@ -122,8 +129,17 @@
 <div class="loading" id="loading">読み込み中…</div>
 
 <div class="slider-bar">
-  <div class="season-label" id="seasonLabel">春</div>
-  <input type="range" id="orbitSlider" min="0" max="1000" value="0" step="1">
+  <div class="season-label" id="seasonLabel">冬</div>
+  <div class="slider-wrap">
+    <div class="slider-ticks">
+      <span style="left:0%">冬</span>
+      <span style="left:25%">春</span>
+      <span style="left:50%">夏</span>
+      <span style="left:75%">秋</span>
+      <span style="left:100%">冬</span>
+    </div>
+    <input type="range" id="orbitSlider" min="0" max="1000" value="0" step="1">
+  </div>
 </div>
 
 <div class="panel">
@@ -176,10 +192,6 @@
   const sunMat = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
   const sunMesh = new THREE.Mesh(sunGeo, sunMat);
   sunGroup.add(sunMesh);
-  // 太陽の淡い光（見た目）
-  const sunGlowMat = new THREE.MeshBasicMaterial({ color: 0xffcc66, transparent: true, opacity: 0.18, side: THREE.BackSide });
-  const sunGlow = new THREE.Mesh(new THREE.SphereGeometry(SUN_RADIUS*1.35, 32, 32), sunGlowMat);
-  sunGroup.add(sunGlow);
 
   // 太陽からの光（地球を照らす）。地球の位置を常に向くようにする。
   const sunLight = new THREE.PointLight(0xffffff, 1.6, 0, 0.0);
@@ -239,6 +251,7 @@
   // ===== テクスチャ読み込み =====
   let toLoad = 2;
   const loader = new THREE.TextureLoader();
+  loader.setCrossOrigin('anonymous');
   function done() { if (--toLoad <= 0) loading.classList.add('hide'); }
   loader.load(EARTH_TEXTURE_URL, (tex) => {
     tex.anisotropy = 4; earthMat.map = tex; earthMat.color.set(0xffffff); earthMat.needsUpdate = true; done();
@@ -289,11 +302,16 @@
   //   angle=π/2   → 春 or 秋、angle=3π/2 → 逆
   // 画像の並び（春=上,夏=左,秋=下,冬=右）に合わせ、反時計回り公転で
   // 冬→春→夏→秋 と進む向きに割り当てる。
+  // 季節の境目角度（中心）。地球が +X 側(angle=0)のとき北極は太陽と反対 → 冬。
+  const SEASON_POINTS = [
+    { name: '冬', deg: 0 },
+    { name: '春', deg: 90 },
+    { name: '夏', deg: 180 },
+    { name: '秋', deg: 270 }
+  ];
   function seasonFromAngle(angle) {
-    // 0..2π に正規化
     let a = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
     const deg = a * 180 / Math.PI;
-    // 中心: 冬=0/360, 春=90, 夏=180, 秋=270（各±45で区切る）
     if (deg < 45 || deg >= 315) return '冬';
     if (deg < 135) return '春';
     if (deg < 225) return '夏';
@@ -313,7 +331,7 @@
     earthOrbit.rotation.y = orbitAngle;
     // 地軸の傾きを公転で打ち消し、ワールド+X方向で一定に保つ
     earthTilt.rotation.set(0, 0, 0);
-    earthTilt.rotateZ(-AXIS_TILT);          // +X方向へ倒す（北極を+X側へ）
+    earthTilt.rotateZ(AXIS_TILT);           // -X方向へ倒す（北極を-X側へ）→ 地球+X側で冬
     earthTilt.rotateY(orbitAngle);          // earthOrbitのY回転を相殺
     seasonLabelEl.textContent = seasonFromAngle(orbitAngle);
   }
@@ -348,7 +366,7 @@
   // 各ビューで別々の視点角・距離を保持
   const camState = {
     earth: { rotX: 0.2, rotY: 0, dist: 3.4 },        // 地球メイン
-    orbit: { rotX: 0.9, rotY: 0, dist: ORBIT_RADIUS*2.4 } // 公転メイン
+    orbit: { rotX: 0.55, rotY: 0, dist: ORBIT_RADIUS*2.4 } // 公転メイン（斜め上）
   };
   function curState() { return viewMode === 0 ? camState.earth : camState.orbit; }
 
@@ -358,8 +376,8 @@
     if (!dragging) return;
     const s = curState();
     const dx = x - lastX, dy = y - lastY;
-    s.rotY += dx * 0.006;
-    s.rotX += dy * 0.006;
+    s.rotY -= dx * 0.006;
+    s.rotX -= dy * 0.006;
     s.rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, s.rotX));
     lastX = x; lastY = y;
   }
@@ -430,7 +448,7 @@
   });
   resetBtn.addEventListener('click', () => {
     if (viewMode === 0) { camState.earth.rotX = 0.2; camState.earth.rotY = 0; camState.earth.dist = 3.4; }
-    else { camState.orbit.rotX = 0.9; camState.orbit.rotY = 0; camState.orbit.dist = ORBIT_RADIUS*2.4; }
+    else { camState.orbit.rotX = 0.55; camState.orbit.rotY = 0; camState.orbit.dist = ORBIT_RADIUS*2.4; }
   });
   axisBtn.addEventListener('click', () => {
     axisLine.visible = !axisLine.visible;
