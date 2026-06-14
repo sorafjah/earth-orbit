@@ -167,12 +167,11 @@
   //   季節の定義（地軸が+X方向に傾いている前提）：
   //     地球が太陽から見て +X 側にいるとき＝北極が太陽の反対 → 冬
   //     地球が -X 側 → 夏
-  //   手描き図に合わせ、春を開始(theta=0)＝地球は +Z 側に置く。
-  //     +Z（手前/上）=春, -X（左）=夏, -Z=秋, +X（右）=冬
+  //   画面上の配置：春=12時(上)、夏=9時(左)、秋=6時(下)、冬=3時(右)
+  //   この並びで反時計回りに 春→夏→秋→冬→春 と進む。
   function earthPos(theta) {
-    // theta=0 で +Z、反時計回り（上から見て）に春→夏→秋→冬
     const x = -Math.sin(theta) * ORBIT_RADIUS;
-    const z =  Math.cos(theta) * ORBIT_RADIUS;
+    const z = -Math.cos(theta) * ORBIT_RADIUS;
     return new THREE.Vector3(x, 0, z);
   }
 
@@ -180,14 +179,14 @@
   // 地軸は +X に傾く。地球位置の x が負（-X側＝夏）／正（+X側＝冬）
   function seasonOf(theta) {
     const x = -Math.sin(theta);
-    const z =  Math.cos(theta);
+    const z = -Math.cos(theta);
     // 北半球基準：-X側で夏、+X側で冬、その間が春・秋
-    if (z > 0.5)  return '春';
+    if (z < -0.5) return '春';
     if (x < -0.5) return '夏';
-    if (z < -0.5) return '秋';
-    if (x > 0.5)  return '冬';
+    if (z >  0.5) return '秋';
+    if (x >  0.5) return '冬';
     // 境界の保険
-    return z >= 0 ? (x < 0 ? '春' : '春') : (x < 0 ? '秋' : '秋');
+    return z < 0 ? '春' : '秋';
   }
 
   // スライダー上の春夏秋冬の位置（0..1）。theta=0→春。
