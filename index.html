@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>3D 地球（ちきゅう）と 公転（こうてん）</title>
+<title>3D 地球（ちきゅう）の公転（こうてん）モデル</title>
 <style>
   :root {
     --bg-top: #0a1a2f;
     --bg-bottom: #02060f;
-    --panel: rgba(255,255,255,0.08);
     --panel-border: rgba(255,255,255,0.18);
     --text: #eaf2ff;
     --accent: #4ea8ff;
+    --slider: #6fc3ff;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -22,76 +22,80 @@
     -webkit-user-select: none; user-select: none;
     touch-action: none;
   }
-  #canvas-wrap { position: fixed; inset: 0; }
+  #main-wrap { position: fixed; inset: 0; }
   canvas { display: block; touch-action: none; }
 
-  /* 地球アップ用の小窓 */
-  #inset {
-    position: fixed; right: 10px; top: 56px;
-    width: 38vw; max-width: 240px; aspect-ratio: 1 / 1;
+  /* 小窓（両方ビューのときのサブ表示） */
+  #inset-wrap {
+    position: fixed; top: 12px; right: 12px;
+    width: 33vw; max-width: 240px; aspect-ratio: 3 / 4;
     border: 2px solid var(--panel-border); border-radius: 14px;
-    overflow: hidden; background: rgba(2,6,15,0.6);
-    display: none; z-index: 3;
+    overflow: hidden; display: none;
+    background: rgba(2,6,15,0.6);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
-  #inset canvas { width: 100%; height: 100%; }
-  #inset .label {
-    position: absolute; top: 4px; left: 8px; font-size: 12px; opacity: 0.8;
-    pointer-events: none;
+  #inset-wrap.show { display: block; }
+  #inset-wrap canvas { width: 100%; height: 100%; }
+  #inset-label {
+    position: absolute; left: 8px; bottom: 6px;
+    font-size: 12px; opacity: 0.85; pointer-events: none;
+    text-shadow: 0 1px 3px #000;
   }
 
-  /* スライダー帯 */
-  .slider-bar {
-    position: fixed; left: 8px; right: 8px; bottom: 72px;
-    display: flex; align-items: center; gap: 10px;
-    background: rgba(2, 6, 15, 0.55);
+  /* 季節バッジ */
+  #season-badge {
+    position: fixed; top: 14px; left: 14px;
+    font-size: 20px; font-weight: 700;
+    padding: 6px 16px; border-radius: 12px;
+    background: rgba(2,6,15,0.55); border: 1px solid var(--panel-border);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    padding: 16px 14px 8px; border-radius: 14px; z-index: 4;
-  }
-  .slider-bar .season-label {
-    flex: 0 0 auto; font-size: 16px; font-weight: 700; min-width: 2.4em; text-align: center;
-  }
-  #orbitSlider {
-    flex: 1 1 auto; height: 38px; margin: 0;
-    -webkit-appearance: none; appearance: none; background: transparent;
-  }
-  #orbitSlider:focus { outline: none; }
-  .slider-wrap { position: relative; flex: 1 1 auto; }
-  .slider-ticks {
-    position: absolute; left: 0; right: 0; top: -14px; height: 14px;
-    pointer-events: none;
-  }
-  .slider-ticks span {
-    position: absolute; transform: translateX(-50%);
-    font-size: 13px; font-weight: 700; opacity: 0.85;
-  }
-  #orbitSlider::-webkit-slider-runnable-track {
-    height: 6px; border-radius: 3px; background: #4ea8ff;
-  }
-  #orbitSlider::-moz-range-track {
-    height: 6px; border-radius: 3px; background: #4ea8ff;
-  }
-  #orbitSlider::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 26px; height: 26px; border-radius: 50%;
-    background: #fff; border: 2px solid var(--accent);
-    margin-top: -10px; cursor: pointer;
-  }
-  #orbitSlider::-moz-range-thumb {
-    width: 26px; height: 26px; border-radius: 50%;
-    background: #fff; border: 2px solid var(--accent); cursor: pointer;
   }
 
+  /* スライダー */
+  .slider-zone {
+    position: fixed; left: 12px; right: 12px; bottom: 80px;
+    background: rgba(2,6,15,0.55);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    border-radius: 14px; padding: 10px 16px 14px;
+  }
+  .slider-marks {
+    position: relative; height: 18px; margin: 0 6px 2px;
+    font-size: 13px; font-weight: 700;
+  }
+  .slider-marks span {
+    position: absolute; transform: translateX(-50%);
+    opacity: 0.85;
+  }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 10px; border-radius: 6px;
+    background: var(--slider);
+    outline: none; margin: 4px 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--accent);
+    cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: #fff; border: 3px solid var(--accent);
+    cursor: pointer;
+  }
+  input[type=range]::-moz-range-track {
+    height: 10px; border-radius: 6px; background: var(--slider);
+  }
+
+  /* 操作パネル */
   .panel {
-    position: fixed; bottom: 16px; left: 8px; right: 8px;
+    position: fixed; bottom: 14px; left: 8px; right: 8px;
     display: flex; gap: 8px; align-items: center; flex-wrap: nowrap;
     justify-content: center;
     background: rgba(2, 6, 15, 0.55);
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
     padding: 8px 10px; border-radius: 16px;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    z-index: 4;
+    overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
   }
   .panel::-webkit-scrollbar { display: none; }
   .btn {
@@ -99,20 +103,18 @@
     background: rgba(255,255,255,0.06); color: var(--text);
     font: inherit; font-size: 15px; font-weight: 600;
     padding: 10px 14px; border-radius: 12px; cursor: pointer;
-    min-height: 44px; flex: 0 0 auto; white-space: nowrap;
+    min-height: 44px; flex: 0 0 auto;
     transition: background 0.15s, border-color 0.15s, transform 0.05s;
+    white-space: nowrap;
   }
   .btn:hover { background: rgba(255,255,255,0.14); }
   .btn:active { transform: scale(0.96); }
   .btn.on { outline: 2px solid var(--accent); outline-offset: 1px; }
-  #viewBtn { font-weight: 700; }
 
   .hint {
-    position: fixed; top: 12px; left: 0; right: 0; text-align: center;
-    font-size: 13px; opacity: 0.7; pointer-events: none;
-    transition: opacity 0.6s;
+    position: fixed; top: 56px; left: 0; right: 0; text-align: center;
+    font-size: 13px; opacity: 0.7; pointer-events: none; transition: opacity 0.6s;
   }
-
   .loading {
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     font-size: 15px; opacity: 0.8; z-index: 5; transition: opacity 0.4s;
@@ -121,418 +123,474 @@
 </style>
 </head>
 <body>
-<div id="canvas-wrap"></div>
+<div id="main-wrap"></div>
+<div id="inset-wrap"><div id="inset-label"></div></div>
 
-<div id="inset"><div class="label">地球（ちきゅう）</div></div>
-
+<div id="season-badge">春</div>
 <div class="hint" id="hint">ドラッグで まわせます。ピンチ／ホイールで 大きさを かえられます。</div>
 <div class="loading" id="loading">読み込み中…</div>
 
-<div class="slider-bar">
-  <div class="slider-wrap">
-    <div class="slider-ticks">
-      <span style="left:0%">冬</span>
-      <span style="left:25%">春</span>
-      <span style="left:50%">夏</span>
-      <span style="left:75%">秋</span>
-      <span style="left:100%">冬</span>
-    </div>
-    <input type="range" id="orbitSlider" min="0" max="1000" value="0" step="1">
-  </div>
+<div class="slider-zone">
+  <div class="slider-marks" id="sliderMarks"></div>
+  <input type="range" id="orbitSlider" min="0" max="1000" value="0">
 </div>
 
 <div class="panel">
-  <button class="btn" id="viewBtn">地球メイン</button>
-  <button class="btn on" id="rotateBtn">自転</button>
-  <button class="btn on" id="revolveBtn">公転</button>
-  <button class="btn" id="resetBtn">正面</button>
+  <button class="btn" id="viewBtn">公転ビュー</button>
+  <button class="btn on" id="playBtn">公転 ▶</button>
   <button class="btn" id="axisBtn">地軸</button>
-  <button class="btn" id="equatorBtn">赤道</button>
-  <button class="btn" id="orbitLineBtn">公転の道</button>
+  <button class="btn on" id="rotateBtn">自転</button>
+  <button class="btn" id="resetBtn">視点リセット</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
 (function () {
-  const wrap = document.getElementById('canvas-wrap');
-  const loading = document.getElementById('loading');
-  const insetEl = document.getElementById('inset');
+  // ============================================================
+  //  定数・設定
+  // ============================================================
+  const AXIS_TILT = 23.4 * Math.PI / 180;     // 地軸の傾き
+  const EARTH_TEX = 'https://sorafjah.github.io/earth-orbit/earth1024.jpg';
+  const SUN_TEX   = 'https://sorafjah.github.io/earth-orbit/sun1024.jpg';
 
-  // ===== テクスチャURL（差し替えはここだけ） =====
-  const EARTH_TEXTURE_URL = 'earth1024.jpg';
-  const SUN_TEXTURE_URL   = 'sun1024.jpg';
+  const ORBIT_RADIUS = 9;      // 公転半径
+  const SUN_RADIUS    = 2.2;   // 太陽の大きさ
+  const EARTH_RADIUS  = 1.0;   // 公転ビューでの地球の大きさ
 
-  const AXIS_TILT = 23.4 * Math.PI / 180; // 地軸の傾き
+  // 地軸はワールド空間で右上(+X方向)に固定して傾ける。
+  // → 公転で地球が動いても北極は常に同じ向き（手描き図のとおり）。
+  // 傾き方向ベクトル（XY平面内、+Xへ23.4°）
+  const TILT_DIR = new THREE.Vector3(Math.sin(AXIS_TILT), Math.cos(AXIS_TILT), 0);
 
-  // ===== 共通シーン =====
+  // 公転角 theta（ラジアン, 0..2π）での地球位置。
+  //   俯瞰は北(+Y)から見下ろす。地球はXZ平面上を回る。
+  //   季節の定義（地軸が+X方向に傾いている前提）：
+  //     地球が太陽から見て +X 側にいるとき＝北極が太陽の反対 → 冬
+  //     地球が -X 側 → 夏
+  //   手描き図に合わせ、春を開始(theta=0)＝地球は +Z 側に置く。
+  //     +Z（手前/上）=春, -X（左）=夏, -Z=秋, +X（右）=冬
+  function earthPos(theta) {
+    // theta=0 で +Z、反時計回り（上から見て）に春→夏→秋→冬
+    const x = -Math.sin(theta) * ORBIT_RADIUS;
+    const z =  Math.cos(theta) * ORBIT_RADIUS;
+    return new THREE.Vector3(x, 0, z);
+  }
+
+  // 季節判定（地球の公転位置→季節名）
+  // 地軸は +X に傾く。地球位置の x が負（-X側＝夏）／正（+X側＝冬）
+  function seasonOf(theta) {
+    const x = -Math.sin(theta);
+    const z =  Math.cos(theta);
+    // 北半球基準：-X側で夏、+X側で冬、その間が春・秋
+    if (z > 0.5)  return '春';
+    if (x < -0.5) return '夏';
+    if (z < -0.5) return '秋';
+    if (x > 0.5)  return '冬';
+    // 境界の保険
+    return z >= 0 ? (x < 0 ? '春' : '春') : (x < 0 ? '秋' : '秋');
+  }
+
+  // スライダー上の春夏秋冬の位置（0..1）。theta=0→春。
+  //   1周(theta:0→2π) を 0→1 にマップ。
+  //   春 theta=0 → 0
+  //   夏 theta=π/2 → 0.25
+  //   秋 theta=π → 0.5
+  //   冬 theta=3π/2 → 0.75
+  const SEASON_MARKS = [
+    { label: '春', pos: 0.00 },
+    { label: '夏', pos: 0.25 },
+    { label: '秋', pos: 0.50 },
+    { label: '冬', pos: 0.75 },
+    { label: '春', pos: 1.00 }
+  ];
+
+  // ============================================================
+  //  共通シーン要素
+  // ============================================================
+  const mainWrap  = document.getElementById('main-wrap');
+  const insetWrap = document.getElementById('inset-wrap');
+  const loading   = document.getElementById('loading');
+
   const scene = new THREE.Scene();
 
-  // ----- 星空 -----
+  // 星空
   const starGeo = new THREE.BufferGeometry();
-  const starCount = 1400, spos = new Float32Array(starCount*3);
+  const starCount = 1400, sp = new Float32Array(starCount*3);
   for (let i = 0; i < starCount; i++) {
-    const r = 120 + Math.random()*120;
+    const r = 80 + Math.random()*60;
     const t = Math.random()*Math.PI*2, p = Math.acos(2*Math.random()-1);
-    spos[i*3]   = r*Math.sin(p)*Math.cos(t);
-    spos[i*3+1] = r*Math.sin(p)*Math.sin(t);
-    spos[i*3+2] = r*Math.cos(p);
+    sp[i*3]   = r*Math.sin(p)*Math.cos(t);
+    sp[i*3+1] = r*Math.sin(p)*Math.sin(t);
+    sp[i*3+2] = r*Math.cos(p);
   }
-  starGeo.setAttribute('position', new THREE.BufferAttribute(spos,3));
-  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.5, sizeAttenuation:true })));
+  starGeo.setAttribute('position', new THREE.BufferAttribute(sp,3));
+  scene.add(new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.4, sizeAttenuation:true })));
 
-  // ===== 太陽（原点） =====
-  const ORBIT_RADIUS = 9;       // 公転半径
-  const SUN_RADIUS = 2.2;
-  const EARTH_RADIUS = 1.0;
+  const ambient = new THREE.AmbientLight(0xffffff, 0.32);
+  scene.add(ambient);
 
+  // 太陽（中心・自ら光る）
   const sunGroup = new THREE.Group();
   scene.add(sunGroup);
   const sunGeo = new THREE.SphereGeometry(SUN_RADIUS, 48, 48);
   const sunMat = new THREE.MeshBasicMaterial({ color: 0xffaa33 });
   const sunMesh = new THREE.Mesh(sunGeo, sunMat);
   sunGroup.add(sunMesh);
-
-  // 太陽からの光（地球を照らす）。地球の位置を常に向くようにする。
-  const sunLight = new THREE.PointLight(0xffffff, 1.6, 0, 0.0);
+  // 太陽からの光（地球を照らす点光源）
+  const sunLight = new THREE.PointLight(0xffffff, 2.0, 0, 0);
   sunGroup.add(sunLight);
-  const ambient = new THREE.AmbientLight(0xffffff, 0.18);
-  scene.add(ambient);
+  // 太陽の発光感（ほんのり大きい透明殻）
+  const glowGeo = new THREE.SphereGeometry(SUN_RADIUS*1.25, 32, 32);
+  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffcc55, transparent: true, opacity: 0.18 });
+  sunGroup.add(new THREE.Mesh(glowGeo, glowMat));
 
-  // ===== 公転の道（リング） =====
-  const orbitRing = new THREE.Mesh(
-    new THREE.TorusGeometry(ORBIT_RADIUS, 0.02, 8, 160),
-    new THREE.MeshBasicMaterial({ color: 0x4ea8ff, transparent: true, opacity: 0.35 })
-  );
-  orbitRing.rotation.x = Math.PI / 2; // 水平面（XZ）に寝かせる
-  orbitRing.visible = false;
+  // 公転軌道のリング（俯瞰の目印）
+  const orbitGeo = new THREE.TorusGeometry(ORBIT_RADIUS, 0.025, 8, 120);
+  const orbitMat = new THREE.MeshBasicMaterial({ color: 0x3a6ea5, transparent:true, opacity:0.5 });
+  const orbitRing = new THREE.Mesh(orbitGeo, orbitMat);
+  orbitRing.rotation.x = Math.PI/2; // XZ平面に寝かせる
   scene.add(orbitRing);
 
-  // ===== 地球 =====
-  // 公転位置を持つ earthOrbit(原点中心の回転) → earthPos(半径ぶん移動)
-  //   → earthTilt(地軸の傾き・公転中も向きは一定) → earthSpin(自転)
-  const earthOrbit = new THREE.Group();   // Y軸まわりに回すと公転
-  scene.add(earthOrbit);
-  const earthPos = new THREE.Group();
-  earthPos.position.set(ORBIT_RADIUS, 0, 0);
-  earthOrbit.add(earthPos);
-
-  const earthTilt = new THREE.Group();
-  earthPos.add(earthTilt);
-  // 地軸の傾きは「公転面に対して一定の向き」を保つ。
-  // ワールドの +X 方向へ倒す形で固定（earthOrbit が回ると earthPos 内で
-  // 相対的に向きが変わってしまうため、毎フレーム earthOrbit の回転を打ち消す）。
-  const earthSpin = new THREE.Group();
+  // 地球グループ（位置=公転、傾き=固定、自転=内側）
+  const earthOrbitPivot = new THREE.Group();  // 位置決め
+  scene.add(earthOrbitPivot);
+  const earthTilt = new THREE.Group();        // 地軸の傾き（固定方向）
+  earthOrbitPivot.add(earthTilt);
+  const earthSpin = new THREE.Group();        // 自転
   earthTilt.add(earthSpin);
+
+  // 地軸の傾きを「ワールドで+X側へ23.4°」に固定する。
+  // earthTilt をクォータニオンで TILT_DIR 方向へ向ける。
+  (function fixTilt() {
+    const up = new THREE.Vector3(0,1,0);
+    const q = new THREE.Quaternion().setFromUnitVectors(up, TILT_DIR.clone().normalize());
+    earthTilt.quaternion.copy(q);
+  })();
 
   const earthGeo = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
   const earthMat = new THREE.MeshPhongMaterial({
     color: 0x335577, shininess: 12, specular: new THREE.Color(0x223344)
   });
-  const earth = new THREE.Mesh(earthGeo, earthMat);
-  earthSpin.add(earth);
+  const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+  earthSpin.add(earthMesh);
 
-  // 赤道・地軸ガイド
-  const equatorRing = new THREE.Mesh(
-    new THREE.TorusGeometry(EARTH_RADIUS*1.01, 0.006, 8, 80),
-    new THREE.MeshBasicMaterial({ color: 0xdd4444, transparent: true, opacity: 0.5 })
-  );
-  equatorRing.rotation.x = Math.PI / 2;
-  equatorRing.visible = false;
-  earthSpin.add(equatorRing);
-
-  const axisLine = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.006, 0.006, EARTH_RADIUS*2.3, 8),
-    new THREE.MeshBasicMaterial({ color: 0xffdd33 })
-  );
+  // 地軸ライン＆赤道（地球と一緒に動く）
+  const axisGeo = new THREE.CylinderGeometry(0.02, 0.02, EARTH_RADIUS*2.8, 8);
+  const axisMat = new THREE.MeshBasicMaterial({ color: 0xffdd33 });
+  const axisLine = new THREE.Mesh(axisGeo, axisMat);
   axisLine.visible = false;
-  earthTilt.add(axisLine); // 傾きと一緒に動く（自転では回らない）
+  earthSpin.add(axisLine);
 
-  // ===== テクスチャ読み込み =====
-  let toLoad = 2;
+  const eqGeo = new THREE.TorusGeometry(EARTH_RADIUS*1.02, 0.012, 8, 64);
+  const eqMat = new THREE.MeshBasicMaterial({ color: 0xdd4444, transparent:true, opacity:0.5 });
+  const eqRing = new THREE.Mesh(eqGeo, eqMat);
+  eqRing.rotation.x = Math.PI/2;
+  eqRing.visible = false;
+  earthSpin.add(eqRing);
+
+  // テクスチャ読み込み
   const loader = new THREE.TextureLoader();
-  loader.setCrossOrigin('anonymous');
-  function done() { if (--toLoad <= 0) loading.classList.add('hide'); }
-  loader.load(EARTH_TEXTURE_URL, (tex) => {
-    tex.anisotropy = 4; earthMat.map = tex; earthMat.color.set(0xffffff); earthMat.needsUpdate = true; done();
-  }, undefined, () => { loading.textContent = '地球画像の読み込みに失敗しました'; });
-  loader.load(SUN_TEXTURE_URL, (tex) => {
-    sunMat.map = tex; sunMat.color.set(0xffffff); sunMat.needsUpdate = true; done();
-  }, undefined, () => { done(); }); // 太陽は失敗しても色玉で続行
+  loader.crossOrigin = 'anonymous';
+  let texLoaded = 0;
+  function checkLoaded() { if (++texLoaded >= 2) loading.classList.add('hide'); }
+  loader.load(EARTH_TEX, (tex) => {
+    tex.anisotropy = 4; earthMat.map = tex; earthMat.color.set(0xffffff); earthMat.needsUpdate = true; checkLoaded();
+  }, undefined, () => { loading.textContent = '画像の読み込みに失敗しました'; });
+  loader.load(SUN_TEX, (tex) => {
+    tex.anisotropy = 4; sunMat.map = tex; sunMat.color.set(0xffffff); sunMat.needsUpdate = true; checkLoaded();
+  }, undefined, () => {});
 
-  // ===== レンダラー =====
+  // ============================================================
+  //  カメラ（2つ）＋レンダラー（2つ）
+  // ============================================================
+  // メインレンダラー
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.setSize(innerWidth, innerHeight);
-  wrap.appendChild(renderer.domElement);
+  mainWrap.appendChild(renderer.domElement);
 
-  // 小窓（地球アップ）用レンダラー
+  // 小窓レンダラー
   const insetRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   insetRenderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  insetEl.appendChild(insetRenderer.domElement);
+  insetWrap.appendChild(insetRenderer.domElement);
 
-  // ===== カメラ =====
-  // メインカメラ（俯瞰／地球メイン共用）。cameraRig で向きをドラッグ。
-  const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 2000);
-  const cameraRig = new THREE.Group();
-  scene.add(cameraRig);
-  cameraRig.add(camera);
+  // 公転俯瞰カメラ（北＝+Yから見下ろす）
+  const orbitCam = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  // 地球アップカメラ（地球の近くから）
+  const earthCam = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
 
-  // 地球アップ専用カメラ
-  const earthCam = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
-  const earthCamRig = new THREE.Group();
-  scene.add(earthCamRig);
-  earthCamRig.add(earthCam);
+  // --- 公転俯瞰カメラのリグ（ドラッグで視点回転） ---
+  // 北から見下ろす視点を基準に、ユーザーのドラッグで回せる。
+  const orbitRig = new THREE.Group();
+  scene.add(orbitRig);
+  let orbitDist = 26;
+  // 俯瞰の初期：ほぼ真上(北)から見下ろす。少しだけ傾けて立体感。
+  let orbitYaw = 0, orbitPitch = -Math.PI/2 + 0.18; // pitch≈-72°（ほぼ真上）
 
-  // ===== ビュー状態 =====
-  // 0: 地球メイン, 1: 公転メイン, 2: 両方（公転メイン＋地球小窓）
-  const VIEW_LABELS = ['地球メイン', '公転メイン', '両方'];
-  let viewMode = 0;
+  // --- 地球アップカメラのリグ ---
+  const earthRig = new THREE.Group();
+  scene.add(earthRig);
+  let earthDist = 4;
+  let earthYaw = 0, earthPitch = 0;
 
-  // ===== 公転・季節 =====
-  // 季節は「公転角」で決まる。
-  // 地軸は常にワールド +X 方向へ AXIS_TILT 倒れている。
-  //   太陽が地球から見て +X 側（angle=0, 地球が -X 側）にあるとき＝北極が太陽を向く＝夏。
-  // angle = earthOrbit.rotation.y（地球の公転角。0 のとき地球は (+R,0,0)）
-  //   地球が (+R,0,0) のとき太陽は -X 方向 → 北極(+X傾き)は太陽と反対 → 冬。
-  //   地球が (-R,0,0)(angle=π) のとき → 北極が太陽を向く → 夏。
-  // よって季節の境目：
-  //   angle=π     → 夏
-  //   angle=0/2π  → 冬
-  //   angle=π/2   → 春 or 秋、angle=3π/2 → 逆
-  // 画像の並び（春=上,夏=左,秋=下,冬=右）に合わせ、反時計回り公転で
-  // 冬→春→夏→秋 と進む向きに割り当てる。
-  // 季節の境目角度（中心）。地球が +X 側(angle=0)のとき北極は太陽と反対 → 冬。
-  const SEASON_POINTS = [
-    { name: '冬', deg: 0 },
-    { name: '春', deg: 90 },
-    { name: '夏', deg: 180 },
-    { name: '秋', deg: 270 }
-  ];
-  function seasonFromAngle(angle) {
-    let a = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-    const deg = a * 180 / Math.PI;
-    if (deg < 45 || deg >= 315) return '冬';
-    if (deg < 135) return '春';
-    if (deg < 225) return '夏';
-    return '秋';
-  }
+  // ============================================================
+  //  状態
+  // ============================================================
+  const VIEWS = ['orbit', 'earth', 'both'];   // 公転メイン / 地球メイン / 両方
+  const VIEW_LABEL = { orbit:'公転ビュー', earth:'地球ビュー', both:'両方ビュー' };
+  let viewIndex = 0;
+  let currentView = VIEWS[viewIndex];
 
-  const seasonLabelEl = document.getElementById('seasonLabel');
+  let theta = 0;            // 公転角
+  let playing = true;       // 公転アニメ
+  let playDir = 1;          // 折り返し方向
+  let autoSpin = true;      // 自転
+  let earthSpinAngle = 0;
+
   const slider = document.getElementById('orbitSlider');
   const SLIDER_MAX = 1000;
 
-  let orbitAngle = 0;           // ラジアン
-  let revolve = true;           // 自動公転
-  const REVOLVE_SPEED = 0.0016; // 自動公転速度
+  // ============================================================
+  //  スライダーのマーク配置
+  // ============================================================
+  (function buildMarks() {
+    const marks = document.getElementById('sliderMarks');
+    SEASON_MARKS.forEach(m => {
+      const s = document.createElement('span');
+      s.textContent = m.label;
+      s.style.left = (m.pos * 100) + '%';
+      marks.appendChild(s);
+    });
+  })();
 
-  function setOrbitAngle(angle) {
-    orbitAngle = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
-    earthOrbit.rotation.y = orbitAngle;
-    // 地軸は宇宙空間で常に一定方向へ傾く（北極の向きは公転しても変わらない）。
-    // earthOrbit のY回転を earthTilt 側で打ち消してから、一定方向へ傾ける。
-    earthTilt.rotation.set(0, 0, 0);
-    earthTilt.rotateY(-orbitAngle);   // earthOrbitのY回転を相殺（ワールド基準に戻す）
-    earthTilt.rotateZ(AXIS_TILT);     // 一定方向へ23.4°傾ける
-    if (seasonLabelEl) seasonLabelEl.textContent = seasonFromAngle(orbitAngle);
+  // ============================================================
+  //  ドラッグ操作（メインビュー対象）
+  // ============================================================
+  let dragging = false, lastX = 0, lastY = 0, pinch = 0;
+
+  function activeCamState() {
+    // 現在メインに表示しているのがどちらのカメラかで操作対象を変える
+    return (currentView === 'earth') ? 'earth' : 'orbit';
   }
 
-  function syncSliderFromAngle() {
-    const v = Math.round(orbitAngle / (Math.PI*2) * SLIDER_MAX) % (SLIDER_MAX+1);
-    slider.value = v;
-  }
-
-  // スライダー操作 → 公転角へ
-  let sliderDragging = false;
-  slider.addEventListener('pointerdown', () => { sliderDragging = true; });
-  slider.addEventListener('pointerup',   () => { sliderDragging = false; });
-  slider.addEventListener('input', () => {
-    sliderDragging = true;
-    const frac = parseInt(slider.value, 10) / SLIDER_MAX;
-    setOrbitAngle(frac * Math.PI * 2);
-  });
-  slider.addEventListener('change', () => { sliderDragging = false; });
-
-  setOrbitAngle(0);
-  syncSliderFromAngle();
-
-  // ===== 操作（ドラッグ・ズーム）=====
-  // 地球メイン: 地球を見る視点。公転メイン: 系全体を見る視点。
-  let dragging = false, lastX = 0, lastY = 0, pinchDist = 0;
-  // 各ビューで別々の視点角・距離を保持
-  const camState = {
-    earth: { rotX: 0.2, rotY: 0, dist: 3.4 },        // 地球メイン
-    orbit: { rotX: 1.35, rotY: 0, dist: ORBIT_RADIUS*2.4 } // 公転メイン（真上=北から俯瞰）
-  };
-  function curState() { return viewMode === 0 ? camState.earth : camState.orbit; }
-
-  const el = renderer.domElement;
-  function pointerDown(x, y) { dragging = true; lastX = x; lastY = y; }
-  function pointerMove(x, y) {
+  function onDown(x, y) { dragging = true; lastX = x; lastY = y; }
+  function onMove(x, y) {
     if (!dragging) return;
-    const s = curState();
     const dx = x - lastX, dy = y - lastY;
-    s.rotY -= dx * 0.006;
-    s.rotX -= dy * 0.006;
-    s.rotX = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, s.rotX));
+    if (activeCamState() === 'orbit') {
+      orbitYaw   += dx * 0.006;
+      orbitPitch += dy * 0.006;
+      orbitPitch = Math.max(-Math.PI/2 + 0.02, Math.min(-0.05, orbitPitch));
+    } else {
+      earthYaw   += dx * 0.006;
+      earthPitch += dy * 0.006;
+      earthPitch = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, earthPitch));
+    }
     lastX = x; lastY = y;
   }
-  function pointerUp() { dragging = false; }
+  function onUp() { dragging = false; pinch = 0; }
 
-  el.addEventListener('mousedown', e => pointerDown(e.clientX, e.clientY));
-  window.addEventListener('mousemove', e => pointerMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', pointerUp);
-  el.addEventListener('wheel', e => {
-    e.preventDefault();
-    const s = curState();
-    if (viewMode === 0) s.dist = Math.max(2.0, Math.min(8, s.dist + e.deltaY * 0.002));
-    else s.dist = Math.max(ORBIT_RADIUS*1.3, Math.min(ORBIT_RADIUS*4, s.dist + e.deltaY * 0.01));
-  }, { passive: false });
+  function zoom(delta) {
+    if (activeCamState() === 'orbit') {
+      orbitDist = Math.max(12, Math.min(60, orbitDist + delta));
+    } else {
+      earthDist = Math.max(2.4, Math.min(10, earthDist + delta));
+    }
+  }
 
-  el.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) pointerDown(e.touches[0].clientX, e.touches[0].clientY);
+  const md = renderer.domElement;
+  md.addEventListener('mousedown', e => onDown(e.clientX, e.clientY));
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', onUp);
+  md.addEventListener('wheel', e => { e.preventDefault(); zoom(e.deltaY * 0.01); }, { passive:false });
+
+  md.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) onDown(e.touches[0].clientX, e.touches[0].clientY);
     else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
-      pinchDist = Math.hypot(dx, dy);
+      pinch = Math.hypot(dx, dy);
     }
-  }, { passive: false });
-  el.addEventListener('touchmove', e => {
+  }, { passive:false });
+  md.addEventListener('touchmove', e => {
     e.preventDefault();
-    if (e.touches.length === 1) pointerMove(e.touches[0].clientX, e.touches[0].clientY);
+    if (e.touches.length === 1) onMove(e.touches[0].clientX, e.touches[0].clientY);
     else if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
       const d = Math.hypot(dx, dy);
-      const s = curState();
-      if (pinchDist) {
-        if (viewMode === 0) s.dist = Math.max(2.0, Math.min(8, s.dist - (d - pinchDist) * 0.01));
-        else s.dist = Math.max(ORBIT_RADIUS*1.3, Math.min(ORBIT_RADIUS*4, s.dist - (d - pinchDist) * 0.04));
-      }
-      pinchDist = d;
+      if (pinch) zoom(-(d - pinch) * 0.04);
+      pinch = d;
     }
-  }, { passive: false });
-  el.addEventListener('touchend', e => { if (e.touches.length === 0) pointerUp(); pinchDist = 0; });
+  }, { passive:false });
+  md.addEventListener('touchend', e => { if (e.touches.length === 0) onUp(); });
 
-  // ===== ボタン =====
-  const viewBtn = document.getElementById('viewBtn');
+  // ============================================================
+  //  ボタン
+  // ============================================================
+  const viewBtn   = document.getElementById('viewBtn');
+  const playBtn   = document.getElementById('playBtn');
+  const axisBtn   = document.getElementById('axisBtn');
   const rotateBtn = document.getElementById('rotateBtn');
-  const revolveBtn = document.getElementById('revolveBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const axisBtn = document.getElementById('axisBtn');
-  const equatorBtn = document.getElementById('equatorBtn');
-  const orbitLineBtn = document.getElementById('orbitLineBtn');
-  const hint = document.getElementById('hint');
-
-  let autoSpin = true;
+  const resetBtn  = document.getElementById('resetBtn');
+  const badge     = document.getElementById('season-badge');
+  const insetLabel= document.getElementById('inset-label');
+  const hint      = document.getElementById('hint');
 
   function applyView() {
-    viewBtn.textContent = VIEW_LABELS[viewMode];
-    insetEl.style.display = (viewMode === 2) ? 'block' : 'none';
-    if (viewMode === 2) resizeInset();
+    currentView = VIEWS[viewIndex];
+    viewBtn.textContent = VIEW_LABEL[currentView];
+    insetWrap.classList.toggle('show', currentView === 'both');
+    if (currentView === 'both') {
+      insetLabel.textContent = '地球';
+    }
+    resize();
   }
 
-  viewBtn.addEventListener('click', () => {
-    viewMode = (viewMode + 1) % 3;
+  function cycleView(dir) {
+    viewIndex = (viewIndex + dir + VIEWS.length) % VIEWS.length;
     applyView();
+  }
+
+  viewBtn.addEventListener('click', () => cycleView(1));
+
+  // キーボード：1で戻る、3で進む（巡回）
+  window.addEventListener('keydown', e => {
+    if (e.key === '1') cycleView(-1);
+    else if (e.key === '3') cycleView(1);
   });
-  rotateBtn.addEventListener('click', () => {
-    autoSpin = !autoSpin; rotateBtn.classList.toggle('on', autoSpin);
+
+  playBtn.addEventListener('click', () => {
+    playing = !playing;
+    playBtn.textContent = playing ? '公転 ▶' : '公転 ⏸';
+    playBtn.classList.toggle('on', playing);
   });
-  revolveBtn.addEventListener('click', () => {
-    revolve = !revolve; revolveBtn.classList.toggle('on', revolve);
-  });
-  resetBtn.addEventListener('click', () => {
-    if (viewMode === 0) { camState.earth.rotX = 0.2; camState.earth.rotY = 0; camState.earth.dist = 3.4; }
-    else { camState.orbit.rotX = 1.35; camState.orbit.rotY = 0; camState.orbit.dist = ORBIT_RADIUS*2.4; }
-  });
+
   axisBtn.addEventListener('click', () => {
-    axisLine.visible = !axisLine.visible;
-    axisBtn.classList.toggle('on', axisLine.visible);
+    const v = !axisLine.visible;
+    axisLine.visible = v; eqRing.visible = v;
+    axisBtn.classList.toggle('on', v);
   });
-  equatorBtn.addEventListener('click', () => {
-    equatorRing.visible = !equatorRing.visible;
-    equatorBtn.classList.toggle('on', equatorRing.visible);
+
+  rotateBtn.addEventListener('click', () => {
+    autoSpin = !autoSpin;
+    rotateBtn.classList.toggle('on', autoSpin);
   });
-  orbitLineBtn.addEventListener('click', () => {
-    orbitRing.visible = !orbitRing.visible;
-    orbitLineBtn.classList.toggle('on', orbitRing.visible);
+
+  resetBtn.addEventListener('click', () => {
+    if (activeCamState() === 'orbit') {
+      orbitYaw = 0; orbitPitch = -Math.PI/2 + 0.18; orbitDist = 26;
+    } else {
+      earthYaw = 0; earthPitch = 0; earthDist = 4;
+    }
+  });
+
+  // スライダー → 公転角
+  slider.addEventListener('input', () => {
+    playing = false;
+    playBtn.textContent = '公転 ⏸';
+    playBtn.classList.remove('on');
+    theta = (parseFloat(slider.value) / SLIDER_MAX) * Math.PI * 2;
   });
 
   setTimeout(() => { hint.style.opacity = '0'; }, 5000);
-  applyView();
 
-  // ===== カメラ更新 =====
-  const earthWorld = new THREE.Vector3();
-  function updateMainCamera() {
-    const s = curState();
-    if (viewMode === 0) {
-      // 地球メイン：地球を中心に見る
-      earthPos.getWorldPosition(earthWorld);
-      cameraRig.position.copy(earthWorld);
-      cameraRig.rotation.set(0, 0, 0);
-      camera.position.set(0, 0, s.dist);
-      cameraRig.rotation.y = s.rotY;
-      cameraRig.rotation.x = s.rotX;
-      camera.lookAt(earthWorld);
-    } else {
-      // 公転メイン：太陽（原点）を中心に系全体を見る
-      cameraRig.position.set(0, 0, 0);
-      cameraRig.rotation.set(0, 0, 0);
-      camera.position.set(0, 0, s.dist);
-      cameraRig.rotation.y = s.rotY;
-      cameraRig.rotation.x = s.rotX;
-      camera.lookAt(0, 0, 0);
+  // ============================================================
+  //  カメラ位置の更新
+  // ============================================================
+  const sphericalToVec = (dist, yaw, pitch) => {
+    // pitch: -π/2(真下→上から見下ろす)〜
+    const x = dist * Math.cos(pitch) * Math.sin(yaw);
+    const y = dist * Math.sin(-pitch);   // pitch=-π/2 で y=+dist（真上）
+    const z = dist * Math.cos(pitch) * Math.cos(yaw);
+    return new THREE.Vector3(x, y, z);
+  };
+
+  function updateOrbitCam() {
+    const off = sphericalToVec(orbitDist, orbitYaw, orbitPitch);
+    orbitCam.position.copy(off);          // 太陽中心(原点)を見る
+    orbitCam.lookAt(0, 0, 0);
+  }
+
+  function updateEarthCam(earthWorldPos) {
+    const off = sphericalToVec(earthDist, earthYaw, earthPitch);
+    earthCam.position.copy(earthWorldPos).add(off);
+    earthCam.lookAt(earthWorldPos);
+  }
+
+  // ============================================================
+  //  リサイズ
+  // ============================================================
+  function resize() {
+    const w = innerWidth, h = innerHeight;
+    renderer.setSize(w, h);
+    orbitCam.aspect = w / h; orbitCam.updateProjectionMatrix();
+    earthCam.aspect = w / h; earthCam.updateProjectionMatrix();
+
+    if (currentView === 'both') {
+      const r = insetWrap.getBoundingClientRect();
+      insetRenderer.setSize(r.width, r.height);
     }
   }
+  window.addEventListener('resize', resize);
 
-  // 地球小窓カメラ（常に地球アップ）
-  function updateEarthCam() {
-    earthPos.getWorldPosition(earthWorld);
-    earthCamRig.position.copy(earthWorld);
-    earthCamRig.rotation.set(0, 0, 0);
-    earthCam.position.set(0, 0, 3.2);
-    earthCamRig.rotation.x = 0.2;
-    earthCam.lookAt(earthWorld);
-  }
-
-  // ===== ループ =====
-  const SPIN_SPEED = 0.01;
+  // ============================================================
+  //  メインループ
+  // ============================================================
+  let lastSeason = '';
   function animate() {
     requestAnimationFrame(animate);
 
-    // 自動公転（スライダー操作中とドラッグ中は止める）
-    if (revolve && !sliderDragging && !dragging) {
-      setOrbitAngle(orbitAngle + REVOLVE_SPEED);
-      syncSliderFromAngle();
+    // 公転の進行（自動 + 折り返し）
+    if (playing) {
+      theta += 0.0045 * playDir;
+      // スライダー値を 0..MAX に折り返しマッピング
+      let sval = (theta / (Math.PI*2)) * SLIDER_MAX;
+      if (sval >= SLIDER_MAX) { sval = SLIDER_MAX; playDir = -1; theta = Math.PI*2; }
+      if (sval <= 0)          { sval = 0;          playDir =  1; theta = 0; }
+      slider.value = sval;
     }
 
+    // 地球の公転位置
+    const pos = earthPos(theta);
+    earthOrbitPivot.position.copy(pos);
+
     // 自転
-    if (autoSpin) earthSpin.rotation.y += SPIN_SPEED;
+    if (autoSpin) earthSpinAngle += 0.01;
+    earthSpin.rotation.y = earthSpinAngle;
 
-    // 太陽光を地球の方へ向ける（PointLightなので位置のみ。原点で常に全方向）
-    updateMainCamera();
-    renderer.render(scene, camera);
+    // 季節バッジ
+    const s = seasonOf(theta);
+    if (s !== lastSeason) { badge.textContent = s; lastSeason = s; }
 
-    if (viewMode === 2) {
-      updateEarthCam();
+    // 太陽の自転（ゆっくり）
+    sunMesh.rotation.y += 0.0008;
+
+    // カメラ更新
+    updateOrbitCam();
+    const earthWorld = new THREE.Vector3();
+    earthMesh.getWorldPosition(earthWorld);
+    updateEarthCam(earthWorld);
+
+    // 軌道リングは公転ビューのときだけ表示
+    orbitRing.visible = (currentView !== 'earth');
+
+    // メイン描画
+    if (currentView === 'earth') {
+      renderer.render(scene, earthCam);
+    } else {
+      renderer.render(scene, orbitCam);
+    }
+
+    // 小窓描画（両方ビューのみ）：小窓は地球アップ
+    if (currentView === 'both') {
       insetRenderer.render(scene, earthCam);
     }
   }
-  animate();
 
-  // ===== リサイズ =====
-  function resizeInset() {
-    const r = insetEl.getBoundingClientRect();
-    insetRenderer.setSize(r.width, r.height, false);
-    earthCam.aspect = 1;
-    earthCam.updateProjectionMatrix();
-  }
-  window.addEventListener('resize', () => {
-    camera.aspect = innerWidth/innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(innerWidth, innerHeight);
-    if (viewMode === 2) resizeInset();
-  });
+  // 初期化
+  applyView();
+  resize();
+  animate();
 })();
 </script>
 </body>
