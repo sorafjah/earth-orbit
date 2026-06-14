@@ -129,7 +129,6 @@
 <div class="loading" id="loading">読み込み中…</div>
 
 <div class="slider-bar">
-  <div class="season-label" id="seasonLabel">冬</div>
   <div class="slider-wrap">
     <div class="slider-ticks">
       <span style="left:0%">冬</span>
@@ -160,8 +159,8 @@
   const insetEl = document.getElementById('inset');
 
   // ===== テクスチャURL（差し替えはここだけ） =====
-  const EARTH_TEXTURE_URL = 'https://sorafjah.github.io/earth3D/earth1024.jpg';
-  const SUN_TEXTURE_URL   = 'https://sorafjah.github.io/earth3D/sun1024.jpg';
+  const EARTH_TEXTURE_URL = 'earth1024.jpg';
+  const SUN_TEXTURE_URL   = 'sun1024.jpg';
 
   const AXIS_TILT = 23.4 * Math.PI / 180; // 地軸の傾き
 
@@ -329,11 +328,12 @@
   function setOrbitAngle(angle) {
     orbitAngle = ((angle % (Math.PI*2)) + Math.PI*2) % (Math.PI*2);
     earthOrbit.rotation.y = orbitAngle;
-    // 地軸の傾きを公転で打ち消し、ワールド+X方向で一定に保つ
+    // 地軸は宇宙空間で常に一定方向へ傾く（北極の向きは公転しても変わらない）。
+    // earthOrbit のY回転を earthTilt 側で打ち消してから、一定方向へ傾ける。
     earthTilt.rotation.set(0, 0, 0);
-    earthTilt.rotateZ(AXIS_TILT);           // -X方向へ倒す（北極を-X側へ）→ 地球+X側で冬
-    earthTilt.rotateY(orbitAngle);          // earthOrbitのY回転を相殺
-    seasonLabelEl.textContent = seasonFromAngle(orbitAngle);
+    earthTilt.rotateY(-orbitAngle);   // earthOrbitのY回転を相殺（ワールド基準に戻す）
+    earthTilt.rotateZ(AXIS_TILT);     // 一定方向へ23.4°傾ける
+    if (seasonLabelEl) seasonLabelEl.textContent = seasonFromAngle(orbitAngle);
   }
 
   function syncSliderFromAngle() {
@@ -343,19 +343,14 @@
 
   // スライダー操作 → 公転角へ
   let sliderDragging = false;
+  slider.addEventListener('pointerdown', () => { sliderDragging = true; });
+  slider.addEventListener('pointerup',   () => { sliderDragging = false; });
   slider.addEventListener('input', () => {
     sliderDragging = true;
     const frac = parseInt(slider.value, 10) / SLIDER_MAX;
     setOrbitAngle(frac * Math.PI * 2);
   });
   slider.addEventListener('change', () => { sliderDragging = false; });
-  // 端まで行ったら反対側へ（input値のラップ）。
-  // ネイティブrangeは端で止まるので、端に達したら反対端へ飛ばす。
-  slider.addEventListener('input', () => {
-    const v = parseInt(slider.value, 10);
-    if (v >= SLIDER_MAX) { slider.value = 0; setOrbitAngle(0); }
-    else if (v <= 0) { /* 0は自然にラップ可。必要なら何もしない */ }
-  });
 
   setOrbitAngle(0);
   syncSliderFromAngle();
@@ -366,7 +361,7 @@
   // 各ビューで別々の視点角・距離を保持
   const camState = {
     earth: { rotX: 0.2, rotY: 0, dist: 3.4 },        // 地球メイン
-    orbit: { rotX: 0.55, rotY: 0, dist: ORBIT_RADIUS*2.4 } // 公転メイン（斜め上）
+    orbit: { rotX: 1.35, rotY: 0, dist: ORBIT_RADIUS*2.4 } // 公転メイン（真上=北から俯瞰）
   };
   function curState() { return viewMode === 0 ? camState.earth : camState.orbit; }
 
@@ -448,7 +443,7 @@
   });
   resetBtn.addEventListener('click', () => {
     if (viewMode === 0) { camState.earth.rotX = 0.2; camState.earth.rotY = 0; camState.earth.dist = 3.4; }
-    else { camState.orbit.rotX = 0.55; camState.orbit.rotY = 0; camState.orbit.dist = ORBIT_RADIUS*2.4; }
+    else { camState.orbit.rotX = 1.35; camState.orbit.rotY = 0; camState.orbit.dist = ORBIT_RADIUS*2.4; }
   });
   axisBtn.addEventListener('click', () => {
     axisLine.visible = !axisLine.visible;
