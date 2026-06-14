@@ -28,7 +28,7 @@
   /* 小窓（両方ビューのときのサブ表示） */
   #inset-wrap {
     position: fixed; top: 12px; right: 12px;
-    width: 33vw; max-width: 240px; aspect-ratio: 3 / 4;
+    width: 32vw; max-width: 240px; aspect-ratio: 1 / 1;
     border: 2px solid var(--panel-border); border-radius: 14px;
     overflow: hidden; display: none;
     background: rgba(2,6,15,0.6);
@@ -68,23 +68,23 @@
   }
   input[type=range] {
     -webkit-appearance: none; appearance: none;
-    width: 100%; height: 10px; border-radius: 6px;
+    width: 100%; height: 4px; border-radius: 3px;
     background: var(--slider);
-    outline: none; margin: 4px 0;
+    outline: none; margin: 8px 0;
   }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none; appearance: none;
-    width: 30px; height: 30px; border-radius: 50%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: #fff; border: 3px solid var(--accent);
     cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   }
   input[type=range]::-moz-range-thumb {
-    width: 30px; height: 30px; border-radius: 50%;
+    width: 28px; height: 28px; border-radius: 50%;
     background: #fff; border: 3px solid var(--accent);
     cursor: pointer;
   }
   input[type=range]::-moz-range-track {
-    height: 10px; border-radius: 6px; background: var(--slider);
+    height: 4px; border-radius: 3px; background: var(--slider);
   }
 
   /* 操作パネル */
@@ -137,10 +137,10 @@
 
 <div class="panel">
   <button class="btn" id="viewBtn">公転ビュー</button>
-  <button class="btn on" id="playBtn">公転 ▶</button>
-  <button class="btn" id="axisBtn">地軸</button>
-  <button class="btn on" id="rotateBtn">自転</button>
   <button class="btn" id="resetBtn">視点リセット</button>
+  <button class="btn on" id="playBtn">公転</button>
+  <button class="btn on" id="rotateBtn">自転</button>
+  <button class="btn" id="axisBtn">地軸</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -239,16 +239,13 @@
   // 太陽からの光（地球を照らす点光源）
   const sunLight = new THREE.PointLight(0xffffff, 2.0, 0, 0);
   sunGroup.add(sunLight);
-  // 太陽の発光感（ほんのり大きい透明殻）
-  const glowGeo = new THREE.SphereGeometry(SUN_RADIUS*1.25, 32, 32);
-  const glowMat = new THREE.MeshBasicMaterial({ color: 0xffcc55, transparent: true, opacity: 0.18 });
-  sunGroup.add(new THREE.Mesh(glowGeo, glowMat));
 
   // 公転軌道のリング（俯瞰の目印）
   const orbitGeo = new THREE.TorusGeometry(ORBIT_RADIUS, 0.025, 8, 120);
   const orbitMat = new THREE.MeshBasicMaterial({ color: 0x3a6ea5, transparent:true, opacity:0.5 });
   const orbitRing = new THREE.Mesh(orbitGeo, orbitMat);
   orbitRing.rotation.x = Math.PI/2; // XZ平面に寝かせる
+  orbitRing.visible = false;
   scene.add(orbitRing);
 
   // 地球グループ（位置=公転、傾き=固定、自転=内側）
@@ -317,12 +314,14 @@
   const orbitCam = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
   // 地球アップカメラ（地球の近くから）
   const earthCam = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+  // 小窓用の地球カメラ（アスペクト比が違うので別に持つ）
+  const insetCam = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
 
   // --- 公転俯瞰カメラのリグ（ドラッグで視点回転） ---
   // 北から見下ろす視点を基準に、ユーザーのドラッグで回せる。
   const orbitRig = new THREE.Group();
   scene.add(orbitRig);
-  let orbitDist = 26;
+  let orbitDist = 30;
   // 俯瞰の初期：ほぼ真上(北)から見下ろす。少しだけ傾けて立体感。
   let orbitYaw = 0, orbitPitch = -Math.PI/2 + 0.18; // pitch≈-72°（ほぼ真上）
 
@@ -342,7 +341,6 @@
 
   let theta = 0;            // 公転角
   let playing = true;       // 公転アニメ
-  let playDir = 1;          // 折り返し方向
   let autoSpin = true;      // 自転
   let earthSpinAngle = 0;
 
@@ -376,13 +374,14 @@
   function onMove(x, y) {
     if (!dragging) return;
     const dx = x - lastX, dy = y - lastY;
+    // ドラッグした向きに天体(模型)が動くよう、視点の回転を逆向きにする。
     if (activeCamState() === 'orbit') {
-      orbitYaw   += dx * 0.006;
-      orbitPitch += dy * 0.006;
+      orbitYaw   -= dx * 0.006;
+      orbitPitch -= dy * 0.006;
       orbitPitch = Math.max(-Math.PI/2 + 0.02, Math.min(-0.05, orbitPitch));
     } else {
-      earthYaw   += dx * 0.006;
-      earthPitch += dy * 0.006;
+      earthYaw   -= dx * 0.006;
+      earthPitch -= dy * 0.006;
       earthPitch = Math.max(-Math.PI/2+0.05, Math.min(Math.PI/2-0.05, earthPitch));
     }
     lastX = x; lastY = y;
@@ -461,13 +460,12 @@
 
   playBtn.addEventListener('click', () => {
     playing = !playing;
-    playBtn.textContent = playing ? '公転 ▶' : '公転 ⏸';
     playBtn.classList.toggle('on', playing);
   });
 
   axisBtn.addEventListener('click', () => {
     const v = !axisLine.visible;
-    axisLine.visible = v; eqRing.visible = v;
+    axisLine.visible = v; eqRing.visible = v; orbitRing.visible = v;
     axisBtn.classList.toggle('on', v);
   });
 
@@ -478,7 +476,7 @@
 
   resetBtn.addEventListener('click', () => {
     if (activeCamState() === 'orbit') {
-      orbitYaw = 0; orbitPitch = -Math.PI/2 + 0.18; orbitDist = 26;
+      orbitYaw = 0; orbitPitch = -Math.PI/2 + 0.18; orbitDist = 30;
     } else {
       earthYaw = 0; earthPitch = 0; earthDist = 4;
     }
@@ -487,7 +485,6 @@
   // スライダー → 公転角
   slider.addEventListener('input', () => {
     playing = false;
-    playBtn.textContent = '公転 ⏸';
     playBtn.classList.remove('on');
     theta = (parseFloat(slider.value) / SLIDER_MAX) * Math.PI * 2;
   });
@@ -507,8 +504,11 @@
 
   function updateOrbitCam() {
     const off = sphericalToVec(orbitDist, orbitYaw, orbitPitch);
-    orbitCam.position.copy(off);          // 太陽中心(原点)を見る
-    orbitCam.lookAt(0, 0, 0);
+    // 注視点を少し手前(+Z)にずらすと、軌道全体が画面の上寄りに映り
+    // 下のスライダー／パネルと重ならない。
+    const target = new THREE.Vector3(0, 0, ORBIT_RADIUS * 0.28);
+    orbitCam.position.copy(off).add(target);
+    orbitCam.lookAt(target);
   }
 
   function updateEarthCam(earthWorldPos) {
@@ -529,6 +529,8 @@
     if (currentView === 'both') {
       const r = insetWrap.getBoundingClientRect();
       insetRenderer.setSize(r.width, r.height);
+      insetCam.aspect = r.width / r.height;
+      insetCam.updateProjectionMatrix();
     }
   }
   window.addEventListener('resize', resize);
@@ -540,14 +542,11 @@
   function animate() {
     requestAnimationFrame(animate);
 
-    // 公転の進行（自動 + 折り返し）
+    // 公転の進行（自動・一方向ループ：冬→春に戻る）
     if (playing) {
-      theta += 0.0045 * playDir;
-      // スライダー値を 0..MAX に折り返しマッピング
-      let sval = (theta / (Math.PI*2)) * SLIDER_MAX;
-      if (sval >= SLIDER_MAX) { sval = SLIDER_MAX; playDir = -1; theta = Math.PI*2; }
-      if (sval <= 0)          { sval = 0;          playDir =  1; theta = 0; }
-      slider.value = sval;
+      theta += 0.0045;
+      if (theta >= Math.PI*2) theta -= Math.PI*2;
+      slider.value = (theta / (Math.PI*2)) * SLIDER_MAX;
     }
 
     // 地球の公転位置
@@ -571,9 +570,6 @@
     earthMesh.getWorldPosition(earthWorld);
     updateEarthCam(earthWorld);
 
-    // 軌道リングは公転ビューのときだけ表示
-    orbitRing.visible = (currentView !== 'earth');
-
     // メイン描画
     if (currentView === 'earth') {
       renderer.render(scene, earthCam);
@@ -581,9 +577,11 @@
       renderer.render(scene, orbitCam);
     }
 
-    // 小窓描画（両方ビューのみ）：小窓は地球アップ
+    // 小窓描画（両方ビューのみ）：小窓は地球アップ（専用カメラ）
     if (currentView === 'both') {
-      insetRenderer.render(scene, earthCam);
+      insetCam.position.copy(earthCam.position);
+      insetCam.quaternion.copy(earthCam.quaternion);
+      insetRenderer.render(scene, insetCam);
     }
   }
 
